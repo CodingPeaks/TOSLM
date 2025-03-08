@@ -1,0 +1,16 @@
+{
+  "name": "youtube-dl-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "album-art": "^4.0.0",
+    "youtube-dl-exec": "^2.4.6"
+  }
+}
