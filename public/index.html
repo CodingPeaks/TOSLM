@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <title>TOSLM</title>
+    <style>
+        /* Stili generali */
+        html {
+            height: 100vh;
+            background-color: #000000;
+        }
+
+        .navbar-title {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #ffffff;
+            text-align: start;
+            width: 100%;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            margin: 0;
+            box-sizing: border-box;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, rgba(24, 24, 24, 1) 0%, rgba(24, 24, 24, 1) 71%, rgba(0, 0, 0, 1) 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h2 {
+            font-size: 2em;
+            color: #1dd65f;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Stili per il form */
+        #form {
+            position: absolute;
+            top: calc(28vh + 68px);
+            display: flex;
+            flex-direction: column;
+            width: 20%;
+        }
+
+        .form-header {
+            width: 95%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Stili per gli input */
+        input {
+            width: 100%;
+            max-width: 400px;
+            background-color: #121212;
+            color: #ffffff;
+            font-size: 16px;
+            padding: 16px;
+            border: 1px solid #ffffff33;
+            border-radius: 500px;
+            box-sizing: border-box;
+            outline: none;
+            transition: border-color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+
+        input::placeholder {
+            color: #b3b3b3;
+        }
+
+        input:focus {
+            border-color: #1DB954;
+            background-color: #181818;
+        }
+
+        .hidden-file-input {
+            opacity: 0;
+            position: absolute;
+            width: 0;
+            height: 0;
+        }
+
+        /* Stili per i pulsanti */
+        a, button {
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: white;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 500px;
+            padding: 12px 32px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #1dd65f;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .custom-upload-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #1DB954;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 500px;
+            padding: 12px 32px;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .custom-upload-button:hover {
+            background-color: #1aa34a;
+        }
+
+        /* Stili per l'icona di aiuto */
+        .help-icon {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #1aa34a;
+            background-color: #000000;
+            color: rgb(175, 175, 175);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+
+        .help-icon:hover {
+            background-color: #1aa34a;
+            color: black;
+        }
+
+        .help-icon:active {
+            transform: scale(0.95);
+        }
+
+        /* Stili per la sezione playlist */
+        #log {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            font-family: monospace;
+            overflow-y: scroll;
+            margin-top: 20px;
+        }
+
+        .navbar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 64px;
+            background-color: #1d1d1d;
+            display: flex;
+            align-items: center;
+            gap: 1px;
+        }
+
+        #connection-status {
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Stili per la finestra modale */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            overflow: auto;
+        }
+
+        .modal-content {
+            background-color: #181818;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #1aa34a;
+            border-radius: 10px;
+            width: 60%;
+            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .modal-title {
+            color: #1dd65f;
+            margin: 0;
+            font-size: 1.5em;
+        }
+
+        .close-modal {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .close-modal:hover {
+            color: #1dd65f;
+        }
+
+        .modal-body {
+            line-height: 1.6;
+            color: #ddd;
+        }
+
+        @media only screen and (max-width: 767px) {
+            #form {
+                width: 70%;
+            }
+
+            .modal-content {
+                width: 85%;
+                margin: 30% auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <img src="logo.png" alt="Spotify Logo" style="width: 200px; margin-bottom: 20px; padding-top: 68px; " />
+    </div>
+
+    <div class="navbar">
+        <div style="display: flex;
+            align-items: center;
+            flex-direction: column;
+            height: 70%;
+            padding-left: 20px;
+            justify-content: center;">
+            <div class="navbar-title">TOSLM</div>
+            <div style="display: flex; gap: 5px;align-items: center;">
+                <span class="status-dot"></span>
+                <div id="connection-status"></div>
+            </div>
+            <!--div class="toslm-navbar">
+                <span>
+                    So, I was at the bar the other day and all of a sudden someone told me something that I couldn't believe at first...well, it turns Out Spotify Likes Money [...]
+                </span>
+            </div-->
+        </div>
+
+
+    </div>
+
+    <!-- Form per inserire il nome della playlist e caricare il CSV -->
+    <div id="form">
+        <div class="form-header">
+            <h2>Playlist title</h2>
+            <div class="help-icon" data-help="playlist-title">
+                <i class="fa-solid fa-question"></i>
+            </div>
+        </div>
+
+        <input type="text" id="playlist-name" placeholder="Playlist title" required />
+
+        <div class="form-header">
+            <h2>Spotlistr CSV</h2>
+            <div class="help-icon" data-help="csv-file">
+                <i class="fa-solid fa-question"></i>
+            </div>
+        </div>
+        <label for="csv-file" class="custom-upload-button">Select File</label>
+        <input type="file" id="csv-file" accept=".csv" class="hidden-file-input" required />
+
+        <!-- Pulsante Submit -->
+        <button id="submit-btn" style="margin-top: 20px;">Create Playlist</button>
+    </div>
+
+    <!-- Visualizzazione della playlist e dei log -->
+    <div id="playlist-section" class="hidden">
+        <h2>Playlist: <span id="playlist-title"></span></h2>
+        <textarea id="log" readonly></textarea>
+    </div>
+
+    <!-- Finestre modali per aiuto -->
+    <div id="modal-playlist-title" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Playlist Title</h3>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <p>Enter the title of the playlist you want to download here.</p>
+                <p>The title will be the name of the folder where your music will be placed.</p>
+            </div>
+            </div>
+            </div>
+            
+            <div id="modal-csv-file" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">CSV File Help</h3>
+                        <span class="close-modal">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <p>Upload a CSV file exported from Spotlistr.<br>The file must contain the following columns:</p>
+                        <ul>
+                            <li>Arist(s) Name</li>
+                            <li>Track Name</li>
+                            <li>Album Name</li>
+                        </ul>
+                        <p>Accepted format: .csv files only</p>
+                        <a href="https://www.spotlistr.com/export/spotify-playlist">Go to Spotlistr</a>
+                    </div>
+        </div>
+    </div>
+
+    <script>
+        // Gestione stato di connessione
+        function wsConnection(connected) {
+            const connectionStatus = document.getElementById('connection-status');
+            connectionStatus.textContent = connected ? 'SERVER ONLINE' : 'SERVER OFFLINE';
+            connectionStatus.style.color = connected ? '#1DB954' : '#ff0000';
+            document.querySelector('.status-dot').style.backgroundColor = connected ? '#1DB954' : '#ff0000';
+        }
+
+        // Connessione WebSocket
+        const ws = new WebSocket('ws://' + window.location.hostname + ':8080');
+
+        ws.onopen = () => {
+            wsConnection(true);
+            console.log('Connesso al server WebSocket');
+        };
+
+        ws.onclose = () => {
+            wsConnection(false);
+            console.log('Connessione WebSocket chiusa');
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'log') {
+                const logElement = document.getElementById('log');
+                logElement.value += message.data + '\n';
+                logElement.scrollTop = logElement.scrollHeight; // Scrolla al fondo
+            }
+        };
+
+        // Funzione per inviare i log al server
+        function sendLog(message) {
+            const logMessage = JSON.stringify({ type: 'log', data: message });
+            ws.send(logMessage);
+        }
+
+        // Verifica che il file sia un CSV
+        function isCSV(file) {
+            return file && file.type === 'text/csv';
+        }
+
+        // Gestione finestre modali
+        const helpIcons = document.querySelectorAll('.help-icon');
+        const modals = document.querySelectorAll('.modal');
+        const closeButtons = document.querySelectorAll('.close-modal');
+
+        // Apri la finestra modale quando si clicca sull'icona di aiuto
+        helpIcons.forEach(icon => {
+            icon.addEventListener('click', function () {
+                const helpType = this.getAttribute('data-help');
+                const modal = document.getElementById(`modal-${helpType}`);
+                modal.style.display = 'block';
+            });
+        });
+
+        // Chiudi la finestra modale quando si clicca sulla X
+        closeButtons.forEach(button => {
+            button.addEventListener('click', function () {
+                const modal = this.closest('.modal');
+                modal.style.display = 'none';
+            });
+        });
+
+        // Chiudi la finestra modale quando si clicca al di fuori di essa
+        window.addEventListener('click', function (event) {
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+
+        // Event listener per il pulsante di submit
+        document.getElementById('submit-btn').addEventListener('click', () => {
+            const playlistName = document.getElementById('playlist-name').value.trim();
+            const csvFile = document.getElementById('csv-file').files[0];
+
+            if (!playlistName) {
+                alert('Your playlist doesn\'t have a title? Really?');
+                return;
+            }
+
+            if (!csvFile || !isCSV(csvFile)) {
+                alert('That\'s not a CSV file. Call your favorite techy-guy and ask him about it. Or ask Google. Whatever.');
+                return;
+            }
+
+            // Invia il log iniziale
+            sendLog('Caricamento della playlist: ' + playlistName);
+
+            // Nasconde il form e mostra la sezione della playlist
+            document.getElementById('form').classList.add('hidden');
+            document.getElementById('playlist-section').classList.remove('hidden');
+            document.getElementById('playlist-title').textContent = playlistName;
+
+            // Invia un messaggio con il nome della playlist al server
+            const payload = JSON.stringify({ type: 'playlist', name: playlistName });
+            ws.send(payload);
+
+            // Simula il caricamento del CSV e invia log
+            setTimeout(() => {
+                sendLog('File CSV caricato correttamente.');
+                // Esempio di log aggiuntivo durante l'elaborazione
+                sendLog('Inizio elaborazione dei dati CSV...');
+                setTimeout(() => {
+                    sendLog('Elaborazione completata!');
+                }, 3000);
+            }, 2000);
+        });
+    </script>
+</body>
+
+</html>
