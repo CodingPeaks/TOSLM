@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.2.0/NoSleep.min.js"></script>
     <title>TOSLM</title>
     <style>
         /* Stili generali */
@@ -205,6 +206,11 @@
             border-radius: 50%;
         }
 
+        .disabled-btn {
+            pointer-events: none;
+            opacity: 0.2;
+        }
+
         /* Stili per la finestra modale */
         .modal {
             display: none;
@@ -220,6 +226,11 @@
             /* Applica il blur allo sfondo */
             -webkit-backdrop-filter: blur(3px);
             /* Supporto per Safari */
+        }
+
+        #stop-btn {
+            width: 100%;
+            background: #ff4c4c;
         }
 
         .modal-content {
@@ -287,9 +298,9 @@
             border: none;
             background: transparent;
             color: white;
-            width: 100%;
-            margin-top: 10px;
-            height: calc(100% - 128px);
+            width: 94%;
+            margin-top: 20px;
+            height: calc(100% - 128px - 64px);
             pointer-events: none;
         }
 
@@ -357,7 +368,7 @@
         <input type="file" id="csv-file" accept=".csv" class="hidden-file-input" required />
 
         <!-- Pulsante Submit -->
-        <button id="submit-btn" style="margin-top: 20px;">Download Playlist</button>
+        <button id="submit-btn" class="disabled-btn" style="margin-top: 20px;">Download Playlist</button>
     </div>
 
     <!-- Visualizzazione della playlist e dei log -->
@@ -369,6 +380,7 @@
         <h3 class="modal-title">Downloading...</h3>
         <span style="color: grey;">Wait here, don't move, don't touch anything.</span>
         <textarea id="log" value=""></textarea>
+        <button id="stop-btn" onclick="stopProcess()" style="margin-top: 20px;">STOP</button>
     </div>
 
     <!-- Finestre modali per aiuto -->
@@ -395,9 +407,12 @@
                 <p>That's not a CSV file.<br>Call your favorite techy-person and<br> ask about it.</p>
                 <p>Or ask Google. Whatever.</p>
                 <div style="display: flex;gap:10px">
-                    <a style="flex: 1;display: flex;flex-direction: column;"><span>Wikipedia</span><span
+                    <a href="https://en.wikipedia.org/wiki/Comma_separated_values" target="_blank"
+                        class="the-other-close-modal"
+                        style="flex: 1;display: flex;flex-direction: column;"><span>Wikipedia</span><span
                             style="font-size: 0.5em;">Comma Separated Values</span></a>
-                    <button style="flex: 1;background-color: #1aa34a;color: white;">Fuck you</button>
+                    <button class="the-other-close-modal" style="flex: 1;background-color: #1aa34a;color: white;">Fuck
+                        you</button>
                 </div>
             </div>
         </div>
@@ -429,12 +444,13 @@
                     <li>Album Name</li>
                 </ul>
                 <p>Accepted format: .csv files only</p>
-                <a href="https://www.spotlistr.com/export/spotify-playlist">Go to Spotlistr</a>
+                <a href="https://www.spotlistr.com/export/spotify-playlist" target="_blank">Go to Spotlistr</a>
             </div>
         </div>
     </div>
 
     <script>
+        var noSleep = new NoSleep();
         // Gestione stato di connessione
         function wsConnection(connected) {
             const connectionStatus = document.getElementById('connection-status');
@@ -473,6 +489,22 @@
             return null;
         }
 
+        function stopProcess() {
+            noSleep.disable();
+            const stopBtn = document.getElementById('stop-btn');
+
+            if (stopBtn.innerText === "STOP") {
+                ws.send(JSON.stringify({
+                    type: "stop",
+                    source: getClientUUID()
+                }))
+                stopBtn.innerText = "Close";
+                stopBtn.style.backgroundColor = "white";
+            } else {
+                closeLogContainer();
+            }
+        }
+
         // Esempio di utilizzo
 
         // Connessione WebSocket
@@ -495,11 +527,14 @@
             const type = message.type;
             switch (type) {
                 case "log":
+                    noSleep.enable();
                     const logElement = document.getElementById('log');
                     logElement.value += "+ " + message.data;
                     logElement.scrollTop = logElement.scrollHeight; // Scrolla al fondo
                     break;
                 case "end":
+                    noSleep.disable();
+                    playAudio();
                     console.log("END:", message.plname);
                     const link = document.createElement('a');
                     const dloadLink = "/clients/" + getClientUUID() + "/zip/" + message.plname + ".zip";
@@ -532,15 +567,26 @@
             document.getElementById('logCnt').style.top = "64px";
         }
 
+        function closeLogContainer() {
+            document.getElementById('logCnt').style.top = "100vh";
+            const logElement = document.getElementById('log');
+            logElement.value = "";
+        }
+
         // Verifica che il file sia un CSV
         function isCSV(file) {
             return file && file.type === 'text/csv';
         }
 
+        function playAudio() {
+            const audio = new Audio('ping.mp3'); // Sostituisci con il percorso del tuo file audio
+            audio.play();
+        }
+
         // Gestione finestre modali
         const helpIcons = document.querySelectorAll('.help-icon');
         const modals = document.querySelectorAll('.modal');
-        const closeButtons = document.querySelectorAll('.close-modal');
+        const closeButtons = document.querySelectorAll(['.close-modal', '.the-other-close-modal']);
 
         // Apri la finestra modale quando si clicca sull'icona di aiuto
         helpIcons.forEach(icon => {
@@ -570,7 +616,10 @@
 
         // Aggiungi un evento 'change' all'input del file
         document.getElementById('csv-file').addEventListener('change', () => {
+            noSleep.enable();
             document.getElementsByClassName('uploaded-icon')[0].style.display = "none";
+            document.getElementById('submit-btn').classList.add('disabled-btn');
+
             const playlistName = document.getElementById('playlist-name').value.trim();
             const csvFile = document.getElementById('csv-file').files[0];
 
@@ -594,6 +643,7 @@
                 const csvContent = event.target.result;
                 const csvPayload = JSON.stringify({ type: 'csv', source: getClientUUID(), content: csvContent, plname: playlistName });
                 ws.send(csvPayload);
+                document.getElementById('submit-btn').classList.remove('disabled-btn');
                 document.getElementsByClassName('uploaded-icon')[0].style.display = "flex";
             };
             reader.onerror = function () {

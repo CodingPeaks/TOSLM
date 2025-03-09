@@ -130,7 +130,7 @@ const downloadImage = async (url, filepath) => {
     const buffer = Buffer.from(arrayBuffer);
 
     await fs.promises.writeFile(filepath, buffer);
-    console.log(`Image saved: ${filepath}`);
+    console.log(`Thumbnail saved`);
   } catch (error) {
     console.error(`Error downloading image: ${error.message}`);
   }
