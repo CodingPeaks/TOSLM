@@ -93,7 +93,8 @@
         }
 
         /* Stili per i pulsanti */
-        a, button {
+        a,
+        button {
             text-decoration: none;
             display: inline-flex;
             align-items: center;
@@ -254,6 +255,31 @@
             color: #ddd;
         }
 
+        #logCnt {
+            padding: 20px;
+            box-sizing: border-box;
+            position: absolute;
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.692);
+            height: calc(100vh - 64px);
+            left: 0;
+            border-top: 2px solid #1aa34a;
+            top: 100vh;
+            backdrop-filter: blur(5px); /* Applica il blur allo sfondo */
+            -webkit-backdrop-filter: blur(5px); /* Supporto per Safari */
+            transition: 0.5s ease;
+        }
+
+        #logCnt textarea {
+            border: none;
+            background: transparent;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+            height: calc(100% - 128px);
+            pointer-events: none;
+        }
+
         @media only screen and (max-width: 767px) {
             #form {
                 width: 70%;
@@ -315,13 +341,18 @@
         <input type="file" id="csv-file" accept=".csv" class="hidden-file-input" required />
 
         <!-- Pulsante Submit -->
-        <button id="submit-btn" style="margin-top: 20px;">Create Playlist</button>
+        <button id="submit-btn" style="margin-top: 20px;">Download Playlist</button>
     </div>
 
     <!-- Visualizzazione della playlist e dei log -->
     <div id="playlist-section" class="hidden">
         <h2>Playlist: <span id="playlist-title"></span></h2>
-        <textarea id="log" readonly></textarea>
+    </div>
+
+    <div id="logCnt">
+        <h3 class="modal-title">Downloading...</h3>
+        <span style="color: grey;">Wait here, don't move, don't touch anything.</span>
+        <textarea id="log" value=""></textarea>
     </div>
 
     <!-- Finestre modali per aiuto -->
@@ -335,25 +366,25 @@
                 <p>Enter the title of the playlist you want to download here.</p>
                 <p>The title will be the name of the folder where your music will be placed.</p>
             </div>
+        </div>
+    </div>
+
+    <div id="modal-csv-file" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">CSV File Help</h3>
+                <span class="close-modal">&times;</span>
             </div>
+            <div class="modal-body">
+                <p>Upload a CSV file exported from Spotlistr.<br>The file must contain the following columns:</p>
+                <ul>
+                    <li>Arist(s) Name</li>
+                    <li>Track Name</li>
+                    <li>Album Name</li>
+                </ul>
+                <p>Accepted format: .csv files only</p>
+                <a href="https://www.spotlistr.com/export/spotify-playlist">Go to Spotlistr</a>
             </div>
-            
-            <div id="modal-csv-file" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3 class="modal-title">CSV File Help</h3>
-                        <span class="close-modal">&times;</span>
-                    </div>
-                    <div class="modal-body">
-                        <p>Upload a CSV file exported from Spotlistr.<br>The file must contain the following columns:</p>
-                        <ul>
-                            <li>Arist(s) Name</li>
-                            <li>Track Name</li>
-                            <li>Album Name</li>
-                        </ul>
-                        <p>Accepted format: .csv files only</p>
-                        <a href="https://www.spotlistr.com/export/spotify-playlist">Go to Spotlistr</a>
-                    </div>
         </div>
     </div>
 
@@ -366,12 +397,45 @@
             document.querySelector('.status-dot').style.backgroundColor = connected ? '#1DB954' : '#ff0000';
         }
 
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+                const r = (Math.random() * 16) | 0;
+                const v = c === 'x' ? r : (r & 0x3) | 0x8;
+                return v.toString(16);
+            });
+        }
+
+        function getClientUUID() {
+            const cookieName = "client_uuid";
+            let uuid = getCookie(cookieName);
+
+            if (!uuid) {
+                uuid = generateUUID();
+                document.cookie = `${cookieName}=${uuid}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
+                // Rimuovi "Secure" se stai testando in HTTP locale
+            }
+
+            return uuid;
+        }
+
+        function getCookie(name) {
+            const cookies = document.cookie.split("; ");
+            for (const cookie of cookies) {
+                const [key, value] = cookie.split("=");
+                if (key === name) return value;
+            }
+            return null;
+        }
+
+        // Esempio di utilizzo
+
         // Connessione WebSocket
         const ws = new WebSocket('ws://' + window.location.hostname + ':8080');
 
         ws.onopen = () => {
             wsConnection(true);
             console.log('Connesso al server WebSocket');
+            console.log("Client UUID:", getClientUUID());
         };
 
         ws.onclose = () => {
@@ -381,9 +445,11 @@
 
         ws.onmessage = (event) => {
             const message = JSON.parse(event.data);
+            console.log(message)
+
             if (message.type === 'log') {
                 const logElement = document.getElementById('log');
-                logElement.value += message.data + '\n';
+                logElement.value += "+ " + message.data;
                 logElement.scrollTop = logElement.scrollHeight; // Scrolla al fondo
             }
         };
@@ -392,6 +458,12 @@
         function sendLog(message) {
             const logMessage = JSON.stringify({ type: 'log', data: message });
             ws.send(logMessage);
+        }
+
+        function openLogContainer(){
+            const playlistName = document.getElementById('playlist-name').value;
+            ws.send(JSON.stringify({type: "start", source: getClientUUID(), plname: playlistName}));
+            document.getElementById('logCnt').style.top = "64px";
         }
 
         // Verifica che il file sia un CSV
@@ -432,6 +504,8 @@
 
         // Event listener per il pulsante di submit
         document.getElementById('submit-btn').addEventListener('click', () => {
+            openLogContainer();
+
             const playlistName = document.getElementById('playlist-name').value.trim();
             const csvFile = document.getElementById('csv-file').files[0];
 
@@ -445,27 +519,33 @@
                 return;
             }
 
-            // Invia il log iniziale
-            sendLog('Caricamento della playlist: ' + playlistName);
+            //openLogContainer();
 
-            // Nasconde il form e mostra la sezione della playlist
-            document.getElementById('form').classList.add('hidden');
-            document.getElementById('playlist-section').classList.remove('hidden');
-            document.getElementById('playlist-title').textContent = playlistName;
-
-            // Invia un messaggio con il nome della playlist al server
-            const payload = JSON.stringify({ type: 'playlist', name: playlistName });
-            ws.send(payload);
-
-            // Simula il caricamento del CSV e invia log
             setTimeout(() => {
-                sendLog('File CSV caricato correttamente.');
-                // Esempio di log aggiuntivo durante l'elaborazione
-                sendLog('Inizio elaborazione dei dati CSV...');
+
+                // Invia il log iniziale
+                sendLog('Uploading Playlist file...');
+
+                // Nasconde il form e mostra la sezione della playlist
+                document.getElementById('form').classList.add('hidden');
+                document.getElementById('playlist-section').classList.remove('hidden');
+                document.getElementById('playlist-title').textContent = playlistName;
+
+                // Invia un messaggio con il nome della playlist al server
+                const payload = JSON.stringify({ type: 'playlist', name: playlistName });
+                ws.send(payload);
+
+                // Simula il caricamento del CSV e invia log
                 setTimeout(() => {
-                    sendLog('Elaborazione completata!');
-                }, 3000);
-            }, 2000);
+                    sendLog('File CSV caricato correttamente.');
+                    // Esempio di log aggiuntivo durante l'elaborazione
+                    sendLog('Inizio elaborazione dei dati CSV...');
+                    setTimeout(() => {
+                        sendLog('Elaborazione completata!');
+                    }, 3000);
+                }, 2000);
+
+            }, 2000)
         });
     </script>
 </body>

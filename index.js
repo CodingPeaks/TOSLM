@@ -8,10 +8,17 @@ const videos = {};
 const ffPath = path.resolve("./bin");
 const isWindows = process.platform === "win32";
 const nullDevice = isWindows ? "NUL" : "/dev/null";
-const playlistName = "test";
+
+// Get command-line arguments
+const args = process.argv.slice(2);
+const clientUUID = args[0];
+const playlistName = args[1] || "test";
 
 async function createDirectory(dirPath) {
   try {
+    const dirExists = await fs.promises.access(dirPath).then(() => true).catch(() => false);
+    if (dirExists) return;
+
     await fs.promises.mkdir(dirPath, { recursive: true });
     console.log(`Directory created: ${dirPath}`);
   } catch (error) {
@@ -132,17 +139,12 @@ const download = async (title, videoUrl) => {
 
       let filenameFilteredSong = sanitizePath(song);
 
-      const downloadsDir = path.resolve("./downloads/" + playlistName);
+      const downloadsDir = path.resolve("./downloads/" + (clientUUID ? clientUUID + "/" : "") + playlistName);
       const noThumb = path.join(downloadsDir, `${filenameFilteredSong}_nothumb.mp3`);
       const outputPath = path.join(downloadsDir, `${filenameFilteredSong}.mp3`);
       const imagePath = path.join(downloadsDir, `${filenameFilteredSong}.jpg`);
 
       await createDirectory(downloadsDir);
-
-      let imageUrl = await albumArt(artist, { album: album, size: "large" });
-      console.log(`Cover URL: ${imageUrl}`);
-
-      await downloadImage(imageUrl, imagePath);
 
       console.log(`Downloading: ${song} by ${artist} (${album})`);
 
@@ -157,6 +159,11 @@ const download = async (title, videoUrl) => {
         });
 
         console.log("Download completed.");
+
+        let imageUrl = await albumArt(artist, { album: album, size: "large" });
+        console.log(`Thumbnail URL: ${imageUrl}`);
+
+        await downloadImage(imageUrl, imagePath);
 
         // Compatible with Windows and Linux
         const addThumbCmd = [
@@ -174,7 +181,8 @@ const download = async (title, videoUrl) => {
 
         child_process.execSync(`${addThumbCmd} > ${nullDevice} 2>&1`, { shell: true });
 
-        console.log("Thumbnail added.");
+        console.log("Metadata added.");
+        console.log("-----------------------------------------------------------")
 
         deleteFile(noThumb);
         deleteFile(imagePath);
@@ -197,7 +205,7 @@ const downloadVideos = async (videos) => {
 
     const downloadNext = () => {
       if (downloadQueue.length === 0 && activeDownloads === 0) {
-        console.log("All downloads completed.");
+        console.log("All done. Bye!");
         return;
       }
       if (activeDownloads >= maxConcurrentDownloads) return;
@@ -205,7 +213,7 @@ const downloadVideos = async (videos) => {
       if (downloadQueue.length > 0) {
         const { title, url } = downloadQueue.shift();
         activeDownloads++;
-        console.log(`Downloading: ${title}`);
+        //console.log(`Downloading: ${title}`);
 
         download(title, url).finally(() => {
           activeDownloads--;
