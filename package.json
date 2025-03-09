@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "album-art": "^4.0.0",
+    "archiver": "^7.0.1",
     "ws": "^8.18.1",
     "youtube-dl-exec": "^2.4.6"
   }

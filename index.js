@@ -4,6 +4,8 @@ const albumArt = require("album-art");
 const fetch = require("node-fetch");
 const path = require("path");
 const child_process = require("child_process");
+const archiver = require('archiver');
+
 const videos = {};
 const ffPath = path.resolve("./bin");
 const isWindows = process.platform === "win32";
@@ -13,14 +15,16 @@ const nullDevice = isWindows ? "NUL" : "/dev/null";
 const args = process.argv.slice(2);
 const clientUUID = args[0];
 const playlistName = args[1] || "test";
+let downloadsDir = "";
 
-async function createDirectory(dirPath) {
+async function createDirectory(dirPath, cb) {
   try {
     const dirExists = await fs.promises.access(dirPath).then(() => true).catch(() => false);
-    if (dirExists) return;
+    if (dirExists) { cb(); return };
 
     await fs.promises.mkdir(dirPath, { recursive: true });
     console.log(`Directory created: ${dirPath}`);
+    cb();
   } catch (error) {
     console.error(`Error creating directory: ${error.message}`);
   }
@@ -139,7 +143,7 @@ const download = async (title, videoUrl) => {
 
       let filenameFilteredSong = sanitizePath(song);
 
-      const downloadsDir = path.resolve("./downloads/" + (clientUUID ? clientUUID + "/" : "") + playlistName);
+      downloadsDir = path.resolve("./clients/" + (clientUUID ? clientUUID + "/" : "") + "downloads/" + playlistName);
       const noThumb = path.join(downloadsDir, `${filenameFilteredSong}_nothumb.mp3`);
       const outputPath = path.join(downloadsDir, `${filenameFilteredSong}.mp3`);
       const imagePath = path.join(downloadsDir, `${filenameFilteredSong}.jpg`);
@@ -205,8 +209,12 @@ const downloadVideos = async (videos) => {
 
     const downloadNext = () => {
       if (downloadQueue.length === 0 && activeDownloads === 0) {
-        console.log("All done. Bye!");
-        return;
+        console.log("Creating compressed archive...");
+        const zipDir = "./clients/" + (clientUUID ? clientUUID + "/" : "") + "zip/";
+        createDirectory(zipDir, () => {
+          console.log(downloadsDir, "->", zipDir + playlistName + ".zip")
+          zipDirectory(downloadsDir, zipDir + playlistName + ".zip")
+        });
       }
       if (activeDownloads >= maxConcurrentDownloads) return;
 
@@ -231,4 +239,37 @@ const downloadVideos = async (videos) => {
   }
 };
 
-processCSV("songs.csv");
+function zipDirectory(sourceDir, outputZip) {
+
+  console.log("Compressing directory:", sourceDir, "- Zip archive:", outputZip)
+
+
+  // Crea una scrittura nel file di destinazione
+  const output = fs.createWriteStream(outputZip);
+
+  // Crea un'istanza dell'archiver per zippare
+  const archive = archiver('zip', {
+    zlib: { level: 9 }  // Imposta la compressione al livello massimo
+  });
+
+  // Gestione degli errori
+  output.on('close', function () {
+    console.log(`Archivio creato con successo! ${archive.pointer()} byte scritti`);
+    console.log("All done. Bye!");
+  });
+
+  archive.on('error', function (err) {
+    throw err;
+  });
+
+  // Imposta la destinazione dell'output
+  archive.pipe(output);
+
+  // Aggiungi la directory al file zip
+  archive.directory(sourceDir, false);  // Il secondo parametro è il prefisso che vuoi dare all'interno dello zip. Lascia vuoto per mantenere la struttura originale
+
+  // Finalizza e scrivi nel file zip
+  archive.finalize();
+}
+
+processCSV(`clients/${clientUUID}/csv/${playlistName}.csv`);
