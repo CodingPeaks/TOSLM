@@ -23,10 +23,10 @@ async function createDirectory(dirPath, cb) {
     if (dirExists) { cb(); return };
 
     await fs.promises.mkdir(dirPath, { recursive: true });
-    console.log(`Directory created: ${dirPath}`);
+    console.log(`Directory created`);//: ${dirPath}`);
     cb();
   } catch (error) {
-    console.error(`Error creating directory: ${error.message}`);
+    console.error(`Error creating directory`);//: ${error.message}`);
   }
 }
 
@@ -50,9 +50,9 @@ async function deleteFile(filePath) {
     await fs.promises.unlink(filePath);
   } catch (error) {
     if (error.code === "ENOENT") {
-      console.warn(`The file does not exist: ${filePath}`);
+      //console.warn(`The file does not exist: ${filePath}`);
     } else {
-      console.error(`Error deleting file: ${filePath}`, error);
+      //console.error(`Error deleting file: ${filePath}`, error);
     }
   }
 }
@@ -212,7 +212,6 @@ const downloadVideos = async (videos) => {
         console.log("Creating compressed archive...");
         const zipDir = "./clients/" + (clientUUID ? clientUUID + "/" : "") + "zip/";
         createDirectory(zipDir, () => {
-          console.log(downloadsDir, "->", zipDir + playlistName + ".zip")
           zipDirectory(downloadsDir, zipDir + playlistName + ".zip")
         });
       }
@@ -241,9 +240,6 @@ const downloadVideos = async (videos) => {
 
 function zipDirectory(sourceDir, outputZip) {
 
-  console.log("Compressing directory:", sourceDir, "- Zip archive:", outputZip)
-
-
   // Crea una scrittura nel file di destinazione
   const output = fs.createWriteStream(outputZip);
 
@@ -254,7 +250,7 @@ function zipDirectory(sourceDir, outputZip) {
 
   // Gestione degli errori
   output.on('close', function () {
-    console.log(`Archivio creato con successo! ${archive.pointer()} byte scritti`);
+    console.log(`Archive created, starting DOWNLOAD... (~${Math.round(archive.pointer()/1000000)}MB`);
     console.log("All done. Bye!");
   });
 

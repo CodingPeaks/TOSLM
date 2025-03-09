@@ -4,6 +4,7 @@ const fs = require('fs');
 
 const wss = new WebSocket.Server({ port: 8080 });
 const clients = [];
+let playlistName;
 
 wss.on('connection', function connection(ws) {
 
@@ -26,9 +27,10 @@ wss.on('connection', function connection(ws) {
         clients[clientUUID] = ws;
         break;
       case "csv":
-        console.log(`Client ${clientUUID} uploaded a CSV file [${message.plname}]`);
+        playlistName = message.plname;
+        console.log(`Client ${clientUUID} uploaded a CSV file [${playlistName}]`);
         createDirectory(`clients/${clientUUID}/csv/`, ()=>{
-          fs.writeFileSync(`clients/${clientUUID}/csv/${message.plname}.csv`, message.content);
+          fs.writeFileSync(`clients/${clientUUID}/csv/${playlistName}.csv`, message.content);
         });
         break;
       default:
@@ -76,8 +78,8 @@ function startProcess(message) {
 
   process.on('close', (code) => {
     socket.send(JSON.stringify({
-      type: "close",
-      data: `Process exited with code ${code}`
+      type: "end",
+      plname: playlistName
     }));
   });
 
